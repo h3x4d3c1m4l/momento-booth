@@ -9,6 +9,8 @@ import 'package:momento_booth/managers/photos_manager.dart';
 import 'package:momento_booth/managers/settings_manager.dart';
 import 'package:momento_booth/models/settings.dart';
 import 'package:momento_booth/views/base/stateless_widget_base.dart';
+import 'package:patterns_canvas/patterns_canvas.dart';
+import 'package:simple_animations/simple_animations.dart';
 
 class LiveViewBackground extends StatelessWidgetBase {
 
@@ -28,6 +30,18 @@ class LiveViewBackground extends StatelessWidgetBase {
       fit: StackFit.expand,
       children: [
         _viewState,
+        LoopAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 1000),
+          builder: (context, value, child) {
+            return CustomPaint(
+              painter: ContainerPatternPainter(
+                stripeOffsetValue: value,
+              ),
+              willChange: true,
+            );
+          },
+        ),
         child,
         _statusOverlay,
       ]
@@ -145,4 +159,32 @@ class LiveView extends StatelessWidgetBase {
     );
   }
 
+}
+
+class ContainerPatternPainter extends CustomPainter {
+  final double stripeOffsetValue;
+  final double stripeFactor;
+
+  ContainerPatternPainter({required this.stripeOffsetValue, this.stripeFactor = 3});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    int stripes = size.width ~/ stripeFactor;
+    double stripeWidth = size.width / stripes * 2;
+    double leftOffset = -stripes + stripeOffsetValue * stripeWidth * 3;
+
+    DiagonalStripesLight(
+      bgColor: Colors.transparent,
+      fgColor: Colors.black,
+      featuresCount: stripes,
+    ).paintOnWidget(
+      canvas,
+      size,
+      customRect: Rect.fromLTWH(leftOffset, 0, size.width * 2, size.height),
+      patternScaleBehavior: PatternScaleBehavior.customRect,
+    );
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
