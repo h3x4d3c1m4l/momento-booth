@@ -14,6 +14,7 @@ import 'package:momento_booth/utils/custom_rect_tween.dart';
 import 'package:momento_booth/views/base/full_screen_dialog.dart';
 import 'package:momento_booth/views/base/settings_based_transition_page.dart';
 import 'package:momento_booth/views/settings_screen/settings_screen.dart';
+import 'package:momento_booth/views/standby_screen/standby_screen.dart';
 
 part 'shell.routes.dart';
 
