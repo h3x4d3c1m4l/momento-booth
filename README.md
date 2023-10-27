@@ -127,7 +127,7 @@ Please note: Run all commands from the root folder of the repository, unless men
 
 ### Adding a new screen using the VS Code extension Template
 
-1. Make sure to have the [Template](https://marketplace.visualstudio.com/items?itemName=yongwoo.templateplate) extension installed
+1. Make sure to have the [Template](https://marketplace.visualstudio.com/items?itemName=yongwoo.template) extension installed
 2. Right click the `views` folder in VS Code Explorer
 3. Click _Template: Create New (with rename)_, pick the `view` template
 4. Pick a name, enter it in `{snake_case}_screen` format (e.g. `settings_screen` or `email_photo_screen`), press Enter

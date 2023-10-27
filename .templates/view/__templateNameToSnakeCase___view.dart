@@ -13,7 +13,7 @@ class __templateNameToPascalCase__View extends ScreenViewBase<__templateNameToPa
   
   @override
   Widget get body {
-    return Text("Hello from __templateNameToPascalCase__!");
+    return const Text("Hello from __templateNameToPascalCase__!");
   }
 
 }
