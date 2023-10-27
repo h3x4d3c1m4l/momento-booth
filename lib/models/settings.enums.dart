@@ -165,3 +165,23 @@ enum AnimationAnchor {
   const AnimationAnchor(this.name);
 
 }
+
+enum Shaders {
+
+  plasmaWaves(
+    name: "Plasma Waves",
+    author: "scarletshark",
+    sourceUrl: "https://www.shadertoy.com/view/ltXczj",
+    fileName: "plasma_waves.frag",
+    license: "CC BY-NC-SA 3.0",
+  );
+
+  final String name;
+  final String author;
+  final String sourceUrl;
+  final String fileName;
+  final String license;
+
+  const Shaders({required this.name, required this.author, required this.sourceUrl, required this.fileName, required this.license});
+
+}

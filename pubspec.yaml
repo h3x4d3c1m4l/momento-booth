@@ -109,6 +109,9 @@ flutter:
     - assets/scripts/
     - assets/sounds/
 
+  shaders:
+    - assets/shaders/plasma_waves.frag
+
   fonts:
     - family: Brandon Grotesque
       fonts:
