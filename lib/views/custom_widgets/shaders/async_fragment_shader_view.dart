@@ -3,25 +3,23 @@ import 'dart:ui';
 
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:momento_booth/views/custom_widgets/indicators/centered_progress_ring.dart';
+import 'package:momento_booth/views/custom_widgets/shaders/fragment_shader_view.dart';
 
-class ShaderView extends StatefulWidget {
+class AsyncFragmentShaderView extends StatefulWidget {
 
   final String assetPath;
 
-  const ShaderView({super.key, required this.assetPath});
+  const AsyncFragmentShaderView({super.key, required this.assetPath});
 
   @override
-  State<ShaderView> createState() => _ShaderViewState();
+  State<AsyncFragmentShaderView> createState() => _AsyncFragmentShaderViewState();
 
 }
 
-class _ShaderViewState extends State<ShaderView> with SingleTickerProviderStateMixin {
+class _AsyncFragmentShaderViewState extends State<AsyncFragmentShaderView> with SingleTickerProviderStateMixin {
 
   final Completer<FragmentShader> _shaderCompleter = Completer();
   Future<FragmentShader> get _shader => _shaderCompleter.future;
-
-  final int _startMs = DateTime.now().millisecondsSinceEpoch;
-  double get delta => (DateTime.now().millisecondsSinceEpoch - _startMs) / 60;
 
   @override
   void initState() {
@@ -45,13 +43,7 @@ class _ShaderViewState extends State<ShaderView> with SingleTickerProviderStateM
         } else if (!snapshot.hasData) {
           return const CenteredProgressRing();
         } else {
-          return CustomPaint(
-            willChange: true,
-            painter: _ShaderPainter(
-              shader: snapshot.data!,
-              time: delta,
-            ),
-          );
+          return FragmentShaderView(fragmentShader: snapshot.data!);
         }
       },
     );
