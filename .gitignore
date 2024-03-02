@@ -69,3 +69,6 @@ AppDir/
 
 # FVM Version Cache
 .fvm/
+
+# Flatpak
+.flatpak-builder/
