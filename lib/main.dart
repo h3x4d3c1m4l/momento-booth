@@ -5,6 +5,7 @@ import 'package:flutter_loggy/flutter_loggy.dart';
 import 'package:loggy/loggy.dart';
 import 'package:momento_booth/app/shell/shell.dart';
 import 'package:momento_booth/managers/_all.dart';
+import 'package:momento_booth/managers/printing_manager.dart';
 import 'package:momento_booth/src/rust/frb_generated.dart';
 import 'package:momento_booth/utils/environment_variables.dart';
 import 'package:momento_booth/utils/platform_and_app.dart';
@@ -27,6 +28,7 @@ void main() async {
   MqttManager.instance.initialize();
   await SfxManager.instance.initialize();
   NotificationsManager.instance.initialize();
+  PrintingManager.instance.initialize();
 
   await SentryFlutter.init(
     (options) {
