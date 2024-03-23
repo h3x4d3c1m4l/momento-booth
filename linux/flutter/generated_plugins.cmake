@@ -4,7 +4,6 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   file_selector_linux
-  flutter_linux_webview
   printing
   screen_retriever
   sentry_flutter
