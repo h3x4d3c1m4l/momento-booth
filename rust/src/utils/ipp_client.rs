@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Cursor};
 use chrono::{DateTime, Utc};
 
-use ipp::prelude::*;
+use ipp::{operation::builder::PrintJobBuilder, prelude::*};
 
 /// Send an IPP request to do `op` to the given `uri` and get the response.
 ///
@@ -69,6 +69,17 @@ pub fn purge_jobs(uri: String) -> bool {
     send_ipp_request(uri, Operation::PurgeJobs).header().status_code().is_success()
 }
 
+pub fn print_job(uri: String, job_name: String, pdf_data: Vec<u8>) -> bool {
+    let uri_p: Uri = uri.parse().unwrap();
+    let pdf_data_cursor = Cursor::new(pdf_data);
+    let pdf_data_payload = IppPayload::new(pdf_data_cursor);
+    let print_job = IppOperationBuilder::print_job(uri_p.clone(), pdf_data_payload).job_title(job_name);
+
+    let client = IppClient::new(uri_p);
+    let resp = client.send(print_job.build());
+    resp.unwrap().header().status_code().is_success()
+}
+
 pub fn restart_job(uri: String, job_id: i32) -> bool {
     send_ipp_job_request(uri, Operation::RestartJob, job_id).header().status_code().is_success()
 }
@@ -79,6 +90,28 @@ pub fn release_job(uri: String, job_id: i32) -> bool {
 
 pub fn cancel_job(uri: String, job_id: i32) -> bool {
     send_ipp_job_request(uri, Operation::CancelJob, job_id).header().status_code().is_success()
+}
+
+pub fn get_printers(uri: String) -> Vec<IppPrinterState> {
+    let resp = send_ipp_request(uri.clone(), Operation::CupsGetPrinters);
+    let mut vec: Vec<IppPrinterState> = Vec::new();
+
+    for printer in resp.attributes().groups_of(DelimiterTag::PrinterAttributes) {
+        let group = printer.attributes().clone();
+        let state = group["printer-state"]
+            .value()
+            .as_enum()
+            .and_then(|v| PrinterState::from_i32(*v))
+            .unwrap();
+        let job_count = group["queued-job-count"].value().as_integer().unwrap().clone();
+        let state_message = group["printer-state-message"].value().to_string().clone();
+        let queue_name = group["printer-name"].value().to_string().clone();
+        let description = group["printer-info"].value().to_string().clone();
+        let state_reason = group["printer-state-reasons"].value().to_string().clone();
+        vec.push(IppPrinterState { queue_name, description, state, job_count, state_message, state_reason });
+    }
+
+    vec
 }
 
 pub fn get_printer_state(uri: String) -> IppPrinterState {
@@ -94,10 +127,11 @@ pub fn get_printer_state(uri: String) -> IppPrinterState {
         .unwrap();
     let job_count = attributes["queued-job-count"].value().as_integer().unwrap().clone();
     let state_message = attributes["printer-state-message"].value().to_string().clone();
-    let name = attributes["printer-name"].value().to_string().clone();
+    let queue_name = attributes["printer-name"].value().to_string().clone();
+    let description = attributes["printer-info"].value().to_string().clone();
     let state_reason = attributes["printer-state-reasons"].value().to_string().clone();
     //print_attributes(attributes);
-    IppPrinterState { name, state, job_count, state_message, state_reason }
+    IppPrinterState { queue_name, description, state, job_count, state_message, state_reason }
 }
 
 pub fn get_jobs_states(uri: String) -> Vec<PrintJobState> {
@@ -153,7 +187,8 @@ fn print_attributes(attributes: HashMap<String, IppAttribute>) {
 
 #[derive(Debug)]
 pub struct IppPrinterState {
-    pub name: String,
+    pub queue_name: String,
+    pub description: String,
     pub state: PrinterState,
     pub job_count: i32,
     pub state_message: String,
