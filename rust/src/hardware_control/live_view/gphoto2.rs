@@ -1,8 +1,9 @@
 use std::{sync::{OnceLock, atomic::{AtomicBool, Ordering}, Arc}, cell::Cell, time::{Duration, Instant}, hash::{Hash, Hasher}};
 
 use ahash::AHasher;
-use gphoto2::{camera::CameraEvent, list::CameraDescriptor, widget::{RadioWidget, TextWidget, ToggleWidget}, Camera, Context, Error};
+use gphoto2::{camera::CameraEvent, list::CameraDescriptor, widget::{RadioWidget, TextWidget, ToggleWidget}, Camera, Context};
 
+use thiserror::Error;
 use tokio::{sync::Mutex as AsyncMutex, time::sleep};
 use tokio::task::JoinHandle as AsyncJoinHandle;
 
@@ -10,11 +11,11 @@ use crate::{helpers::log_debug, models::images::RawImage, utils::jpeg};
 
 static CONTEXT: OnceLock<Context> = OnceLock::new();
 
-fn get_context() -> Result<&'static Context> {
+fn get_context() -> Gphoto2Result<&'static Context> {
   CONTEXT.get().ok_or(Gphoto2Error::ContextNotInitialized)
 }
 
-pub fn initialize() -> Result<()> {
+pub fn initialize() -> Gphoto2Result<()> {
   if CONTEXT.get().is_some() {
     // Already initialized
     return Ok(())
@@ -26,17 +27,17 @@ pub fn initialize() -> Result<()> {
   Ok(())
 }
 
-pub fn get_cameras() -> Result<Vec<GPhoto2CameraInfo>> {
+pub fn get_cameras() -> Gphoto2Result<Vec<GPhoto2CameraInfo>> {
   let mut cameras: Vec<GPhoto2CameraInfo> = Vec::new();
-  for CameraDescriptor { model, port } in get_context()?.list_cameras().wait().expect("Could not list cameras") {
+  for CameraDescriptor { model, port } in get_context()?.list_cameras().wait()? {
     cameras.push(GPhoto2CameraInfo::from_camera_descriptor(CameraDescriptor { model, port }));
   }
 
   Ok(cameras)
 }
 
-pub async fn open_camera(model: String, _: String, special_handling: GPhoto2CameraSpecialHandling) -> Result<GPhoto2Camera> {
-  let camera_descriptor = get_context()?.list_cameras().await.expect("Could not enumerate cameras").into_iter().find(|camera| camera.model == model).expect("Could not find camera");
+pub async fn open_camera(model: String, _: String, special_handling: GPhoto2CameraSpecialHandling) -> Gphoto2Result<GPhoto2Camera> {
+  let camera_descriptor = get_context()?.list_cameras().await?.into_iter().find(|camera| camera.model == model).ok_or(Gphoto2Error::CameraNotFound(model))?;
   let camera = get_context()?.get_camera(&camera_descriptor).await?;
 
   Ok(GPhoto2Camera {
@@ -48,7 +49,7 @@ pub async fn open_camera(model: String, _: String, special_handling: GPhoto2Came
   })
 }
 
-pub async fn start_liveview<F, D>(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>, frame_callback: F, duplicate_frame_callback: D) -> Result<()> where F: Fn(Result<RawImage>) + Send + Sync + 'static, D: Fn() + Send + Sync + 'static {
+pub async fn start_liveview<F, D>(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>, frame_callback: F, duplicate_frame_callback: D) -> Gphoto2Result<()> where F: Fn(Gphoto2Result<RawImage>) + Send + Sync + 'static, D: Fn() + Send + Sync + 'static {
   let mut camera = camera_ref.lock().await;
 
   // TODO: check if join handle not already set
@@ -100,7 +101,7 @@ fn hash_box(data: &Box<[u8]>) -> u64 {
     hasher.finish()
 }
 
-pub async fn stop_liveview(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>) -> Result<()> {
+pub async fn stop_liveview(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>) -> Gphoto2Result<()> {
   let camera = camera_ref.lock().await;
   camera.thread_should_stop.store(true, Ordering::SeqCst);
 
@@ -114,7 +115,7 @@ pub async fn stop_liveview(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>) -> Result
   }
 }
 
-pub async fn auto_focus(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>) -> Result<()> {
+pub async fn auto_focus(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>) -> Gphoto2Result<()> {
   let camera = camera_ref.lock().await;
   
   match camera.special_handling {
@@ -134,7 +135,7 @@ pub async fn auto_focus(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>) -> Result<()
   Ok(())
 }
 
-pub async fn clear_events(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>, download_extra_files: bool) -> Result<()> {
+pub async fn clear_events(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>, download_extra_files: bool) -> Gphoto2Result<()> {
   let camera = camera_ref.lock().await;
 
   let start = Instant::now();
@@ -177,7 +178,7 @@ pub async fn set_extra_file_callback<F>(camera_ref: Arc<AsyncMutex<GPhoto2Camera
   camera.extra_file_callback = Some(Box::new(file_data_callback));
 }
 
-pub async fn capture_photo(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>, capture_target_value: String) -> Result<GPhoto2File> {
+pub async fn capture_photo(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>, capture_target_value: String) -> Gphoto2Result<GPhoto2File> {
   let camera = camera_ref.lock().await;
 
   if !capture_target_value.is_empty() {
@@ -232,25 +233,22 @@ pub enum GPhoto2CameraSpecialHandling {
 // Errors //
 // ////// //
 
-type Result<T> = std::result::Result<T, Gphoto2Error>;
+type Gphoto2Result<T> = std::result::Result<T, Gphoto2Error>;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
 pub enum Gphoto2Error {
+  #[error("The gphoto2 context is not initialized, first call initialize()")]
   ContextNotInitialized,
-  // PoisonError,
-  // FrameDecodeError,
-  // StopLiveViewThreadError(Box<dyn Any + Send>),
-  Gphoto2LibraryError(Error),
-}
 
-impl From<Error> for Gphoto2Error {
-  fn from(err: Error) -> Gphoto2Error {
-    Gphoto2Error::Gphoto2LibraryError(err)
-  }
+  #[error("The requested camera with name '{0}' was not found")]
+  CameraNotFound(String),
+
+  #[error("The gphoto2 library could not complete the operation")]
+  LibraryError(#[from] gphoto2::Error),
 }
 
 pub struct GPhoto2File {
-    pub source_folder: String,
-    pub filename: String,
-    pub data: Vec<u8>,
+  pub source_folder: String,
+  pub filename: String,
+  pub data: Vec<u8>,
 }

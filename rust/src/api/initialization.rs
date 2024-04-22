@@ -17,6 +17,11 @@ use super::nokhwa::NOKHWA_HANDLES;
 
 static HARDWARE_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
+#[flutter_rust_bridge::frb(init)]
+pub fn init_library() {
+    flutter_rust_bridge::setup_default_user_utils();
+}
+
 pub fn initialize_log(log_sink: StreamSink<LogEvent>) {
     helpers::initialize_log(log_sink);
 }

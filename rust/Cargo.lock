@@ -2987,7 +2987,6 @@ name = "rust_lib_momento_booth"
 version = "0.2.0"
 dependencies = [
  "ahash",
- "anyhow",
  "atom_table",
  "chrono",
  "dashmap 5.5.3",
@@ -3011,6 +3010,7 @@ dependencies = [
  "rexiv2",
  "serde_json",
  "static_init",
+ "thiserror",
  "tokio",
  "turborand",
  "url 2.5.0",
