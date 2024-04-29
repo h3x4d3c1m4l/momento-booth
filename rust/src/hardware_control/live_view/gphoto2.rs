@@ -1,4 +1,4 @@
-use std::{sync::{OnceLock, atomic::{AtomicBool, Ordering}, Arc}, cell::Cell, time::{Duration, Instant}, hash::{Hash, Hasher}};
+use std::{backtrace::{Backtrace}, cell::Cell, hash::{Hash, Hasher}, sync::{atomic::{AtomicBool, Ordering}, Arc, OnceLock}, time::{Duration, Instant}};
 
 use ahash::AHasher;
 use gphoto2::{camera::CameraEvent, list::CameraDescriptor, widget::{RadioWidget, TextWidget, ToggleWidget}, Camera, Context};
@@ -62,7 +62,7 @@ pub async fn start_liveview<F, D>(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>, fr
     },
     _ => {},
   }
-  
+
   let camera_ref = camera_ref.clone();
   let join_handle = tokio::spawn(async move {
     let context = get_context().expect("TODO: handle this");
@@ -117,7 +117,7 @@ pub async fn stop_liveview(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>) -> Gphoto
 
 pub async fn auto_focus(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>) -> Gphoto2Result<()> {
   let camera = camera_ref.lock().await;
-  
+
   match camera.special_handling {
     GPhoto2CameraSpecialHandling::NikonGeneric | GPhoto2CameraSpecialHandling::NikonDSLR => {
       // Non blocking autofocus
@@ -189,7 +189,7 @@ pub async fn capture_photo(camera_ref: Arc<AsyncMutex<GPhoto2Camera>>, capture_t
 
   let capture = camera.camera.capture_image().await?;
   log_debug(format!("Downloading file from camera: {}/{}", capture.folder(), capture.name()));
-  
+
   let file = camera.camera.fs().download(&capture.folder(), &capture.name()).await?;
   let data = file.get_data(get_context()?).await?;
 
@@ -244,7 +244,14 @@ pub enum Gphoto2Error {
   CameraNotFound(String),
 
   #[error("The gphoto2 library could not complete the operation")]
-  LibraryError(#[from] gphoto2::Error),
+  LibraryError {
+    #[from]
+    source: gphoto2::Error,
+
+    // Should work when error_generic_member_access is stable
+    // #[backtrace]
+    // backtrace: Backtrace,
+  },
 }
 
 pub struct GPhoto2File {
