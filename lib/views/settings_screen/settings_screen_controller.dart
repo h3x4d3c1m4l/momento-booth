@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:momento_booth/main.dart';
 import 'package:momento_booth/managers/photos_manager.dart';
 import 'package:momento_booth/models/maker_note_data.dart';
 import 'package:momento_booth/models/settings.dart';
@@ -82,7 +83,7 @@ class SettingsScreenController extends ScreenControllerBase<SettingsScreenViewMo
     final pixelRatio = viewModel.resolutionMultiplier;
     final format = viewModel.exportFormat;
     final jpgQuality = viewModel.jpgQuality;
-    PhotosManager.instance.outputImage = await viewModel.collageKey.currentState!.getCollageImage(
+    getIt<PhotosManager>().outputImage = await viewModel.collageKey.currentState!.getCollageImage(
       createdByMode: CreatedByMode.manual,
       pixelRatio: pixelRatio,
       format: format,
@@ -90,7 +91,7 @@ class SettingsScreenController extends ScreenControllerBase<SettingsScreenViewMo
     );
     logDebug('captureCollage took ${stopwatch.elapsed}');
 
-    File? file = await PhotosManager.instance.writeOutput(advance: true);
+    File? file = await getIt<PhotosManager>().writeOutput(advance: true);
     logDebug("Wrote template debug export output to ${file?.path}");
   }
 
@@ -257,7 +258,7 @@ class SettingsScreenController extends ScreenControllerBase<SettingsScreenViewMo
   void onCupsPageSizeChanged(String? mediaSize, PrintSize? printSize) {
     if (mediaSize != null && printSize != null) {
       final dimension = mediaSize == ""
-              ? const PrintDimension(name: "", height: 0, width: 0, keyword: "") 
+              ? const PrintDimension(name: "", height: 0, width: 0, keyword: "")
               : viewModel.mediaDimensions.where((element) => element.keyword == mediaSize).firstOrNull;
       if (dimension == null) return;
       final newSize = MediaSettings(mediaSizeString: dimension.keyword, mediaSizeHeight: dimension.height, mediaSizeWidth: dimension.width);
