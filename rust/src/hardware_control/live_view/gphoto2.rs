@@ -265,9 +265,7 @@ pub struct GPhoto2File {
 // FRB API //
 // /////// //
 
-#[frb(ignore)]
 lazy_static::lazy_static! {
-    #[frb(ignore)]
     pub static ref GPHOTO2_HANDLES: DashMap<u32, Arc<Mutex<GPhoto2CameraHandle>>> = DashMap::<u32, Arc<Mutex<GPhoto2CameraHandle>>>::new();
 }
 
@@ -438,7 +436,6 @@ pub fn gphoto2_set_extra_file_callback(handle_id: u32, image_sink: StreamSink<GP
 // Structs //
 // /////// //
 
-#[frb(ignore)]
 pub struct GPhoto2CameraHandle {
     pub status_sink: Option<StreamSink<CameraState>>,
     pub camera: Arc<AsyncMutex<GPhoto2Camera>>,
@@ -452,7 +449,6 @@ pub struct GPhoto2CameraHandle {
 }
 
 impl GPhoto2CameraHandle {
-    #[frb(ignore)]
     fn new(camera: GPhoto2Camera, operations: Vec<ImageOperation>) -> Self {
         Self {
             status_sink: None,
@@ -469,7 +465,6 @@ impl GPhoto2CameraHandle {
 }
 
 impl Drop for GPhoto2CameraHandle {
-    #[frb(ignore)]
     fn drop(&mut self) {
         log_debug("Dropping GPhoto2CameraHandle".to_string());
     }
